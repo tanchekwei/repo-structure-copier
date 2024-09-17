@@ -1,12 +1,12 @@
 {
-  "name": "codebase-structure-copier",
+  "name": "repo-structure-copier",
   "displayName": "Codebase Structure Copier",
   "description": "Extension to copy the full code repository structure to clipboard for use in LLMs",
   "version": "1.0.0",
   "publisher": "Niels Hop",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/repo-structure-copier.git"
+    "url": "https://github.com/niels-hop/repo-structure-copier"
   },
   "engines": {
     "vscode": "^1.93.0"
