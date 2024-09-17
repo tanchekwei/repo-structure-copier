@@ -2,7 +2,7 @@
   "name": "repo-structure-copier",
   "displayName": "Codebase Structure Copier",
   "description": "Extension to copy the full code repository structure to clipboard for use in LLMs",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "NielsHop",
   "repository": {
     "type": "git",
@@ -56,7 +56,6 @@
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",

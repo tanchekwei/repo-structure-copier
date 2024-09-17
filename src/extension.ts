@@ -1,91 +1,99 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as tiktoken from 'tiktoken';
 import ignore from 'ignore';
 
-let ig: ReturnType<typeof ignore> | null = null;
+class RepoStructureCopier {
+    private ig: ReturnType<typeof ignore> | null = null;
 
-export function activate(context: vscode.ExtensionContext) {
-    let disposable = vscode.commands.registerCommand('extension.copyRepoStructure', async () => {
+    async copyRepoStructure() {
+        const rootPath = this.getRootPath();
+        if (!rootPath) {
+            return;
+        }
+
+        this.ig = this.parseRepoIgnore(rootPath);
+        const structure = await this.traverseDirectory(rootPath);
+        const tokenCount = this.countTokens(structure);
+        const formattedTokenCount = this.formatTokenCount(tokenCount);
+
+        await vscode.env.clipboard.writeText(structure);
+        vscode.window.showInformationMessage(`Repository structure copied to clipboard. Token count: ${formattedTokenCount}`);
+    }
+
+    private getRootPath(): string | null {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
             vscode.window.showErrorMessage('No workspace folder open');
-            return;
+            return null;
         }
-        const rootPath = workspaceFolders[0].uri.fsPath;
+        return workspaceFolders[0].uri.fsPath;
+    }
+
+    private parseRepoIgnore(rootPath: string): ReturnType<typeof ignore> {
+        const ig = ignore();
+        const repoignorePath = path.join(rootPath, '.repoignore');
         
-        // Parse .repoignore file
-        ig = parseRepoIgnore(rootPath);
-        const structure = await traverseDirectory(rootPath);
+        try {
+            const repoignoreContent = fs.readFileSync(repoignorePath, 'utf8');
+            ig.add(repoignoreContent);
+        } catch (error) {
+            vscode.window.showWarningMessage('No .repoignore file found. No files will be ignored.');
+        }
         
-        const structureJson = structure;
-        const tokenCount = countTokens(structureJson);
-        const formattedTokenCount = formatTokenCount(tokenCount);
-        await vscode.env.clipboard.writeText(structureJson);
-        vscode.window.showInformationMessage(`Repository structure copied to clipboard. Token count: ${formattedTokenCount}`);
-    });
+        return ig;
+    }
+
+    private shouldIgnore(filePath: string, rootPath: string): boolean {
+        if (!this.ig) {
+            return false;
+        }
+        
+        const relativePath = path.relative(rootPath, filePath);
+        return this.ig.ignores(relativePath);
+    }
+
+    private async traverseDirectory(dir: string, rootPath: string = dir): Promise<string> {
+        let result = '<codebase>';
+        const files = await fs.readdir(dir);
+        
+        for (const file of files) {
+            const filePath = path.join(dir, file);
+            const stat = await fs.stat(filePath);
+            
+            if (this.shouldIgnore(filePath, rootPath)) {
+                continue;
+            }
+            
+            if (stat.isDirectory()) {
+                result += await this.traverseDirectory(filePath, rootPath);
+            } else {
+                const content = await fs.readFile(filePath, 'utf8');
+                result += `<file><path>${filePath}</path><content>${content}</content></file>`;
+            }
+        }
+        
+        result += '</codebase>';
+        return result;
+    }
+
+    private countTokens(text: string): number {
+        const encoding = tiktoken.encoding_for_model("gpt-4");
+        const tokens = encoding.encode(text);
+        encoding.free();
+        return tokens.length;
+    }
+
+    private formatTokenCount(count: number): string {
+        return count < 1000 ? count.toString() : `${(count / 1000).toFixed(1)}k`;
+    }
+}
+
+export function activate(context: vscode.ExtensionContext) {
+    const repoStructureCopier = new RepoStructureCopier();
+    let disposable = vscode.commands.registerCommand('extension.copyRepoStructure', () => repoStructureCopier.copyRepoStructure());
     context.subscriptions.push(disposable);
-}
-
-function parseRepoIgnore(rootPath: string): ReturnType<typeof ignore> {
-    const ig = ignore();
-    const repoignorePath = path.join(rootPath, '.repoignore');
-    
-    if (fs.existsSync(repoignorePath)) {
-        const repoignoreContent = fs.readFileSync(repoignorePath, 'utf8');
-        ig.add(repoignoreContent);
-    } else {
-        vscode.window.showWarningMessage('No .repoignore file found. No files will be ignored.');
-    }
-    
-    return ig;
-}
-
-function shouldIgnore(filePath: string, rootPath: string): boolean {
-    if (!ig) {return false;}
-    
-    const relativePath = path.relative(rootPath, filePath);
-    return ig.ignores(relativePath);
-}
-
-async function traverseDirectory(dir: string, rootPath: string = dir): Promise<string> {
-    let result = '<codebase>'; // Start the XML structure
-    const files = await fs.promises.readdir(dir);
-    
-    for (const file of files) {
-        const filePath = path.join(dir, file);
-        const stat = await fs.promises.stat(filePath);
-        
-        if (shouldIgnore(filePath, rootPath)) {
-            continue;
-        }
-        
-        if (stat.isDirectory()) {
-            result += await traverseDirectory(filePath, rootPath); // Recursively add directory contents
-        } else {
-            const content = await fs.promises.readFile(filePath, 'utf8'); // Read file content
-            result += `<file><path>${filePath}</path><content>${content}</content></file>`;
-        }
-    }
-    
-    result += '</codebase>'; // End the XML structure
-    return result;
-}
-
-function countTokens(text: string): number {
-    const encoding = tiktoken.encoding_for_model("gpt-4");
-    const tokens = encoding.encode(text);
-    encoding.free();
-    return tokens.length;
-}
-
-function formatTokenCount(count: number): string {
-    if (count < 1000) {
-        return count.toString();
-    } else {
-        return (count / 1000).toFixed(1) + 'k';
-    }
 }
 
 export function deactivate() {}

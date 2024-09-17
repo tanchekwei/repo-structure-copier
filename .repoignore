@@ -4,6 +4,8 @@ node_modules/
 .vscode-test/
 *.vsix
 .vscode/
-.git
+*ignore*
 .git/
 package-lock.json
+*.png
+.DS_Store
