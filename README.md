@@ -51,17 +51,4 @@ This extension does not add any VS Code settings.
 - Large repositories may take some time to process
 - Very large files might cause performance issues
 
-## Release Notes
-
-### 1.0.0
-
-Initial release of Repository Structure Copier
-
----
-
-## For more information
-
-- [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-- [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
 **Enjoy!**

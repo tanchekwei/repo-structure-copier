@@ -1,9 +1,22 @@
-# Change Log
+# Changelog
 
-All notable changes to the "repo-structure-copier" extension will be documented in this file.
+All notable changes to the "Repository Structure Copier" extension will be documented in this file.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## [1.0.3] - 2024-09-17
+### Added
+- Improved error handling for missing .repoignore file
+- Changelog file
 
-## [Unreleased]
+### Changed
+- Refactored codebase for better maintainability
+- Updated to use fs/promises for all file operations
 
-- Initial release
+### Fixed
+- Issue with XML escaping interfering with LLM input
+
+## [1.0.0] - 2024-09-15
+### Added
+- Initial release of Repository Structure Copier
+- Feature to copy entire repository structure to clipboard
+- Support for .repoignore file to exclude specific files/directories
+- Token count calculation for copied structure
