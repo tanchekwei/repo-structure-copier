@@ -13,7 +13,7 @@ class RepoStructureCopier {
             return;
         }
 
-        this.ig = this.parseRepoIgnore(rootPath);
+        this.ig = await this.parseRepoIgnore(rootPath);
         const structure = await this.traverseDirectory(rootPath);
         const tokenCount = this.countTokens(structure);
         const formattedTokenCount = this.formatTokenCount(tokenCount);
@@ -31,12 +31,12 @@ class RepoStructureCopier {
         return workspaceFolders[0].uri.fsPath;
     }
 
-    private parseRepoIgnore(rootPath: string): ReturnType<typeof ignore> {
+    private async parseRepoIgnore(rootPath: string): Promise<ReturnType<typeof ignore>> {
         const ig = ignore();
         const repoignorePath = path.join(rootPath, '.repoignore');
         
         try {
-            const repoignoreContent = fs.readFileSync(repoignorePath, 'utf8');
+            const repoignoreContent = await fs.readFile(repoignorePath, 'utf8');
             ig.add(repoignoreContent);
         } catch (error) {
             vscode.window.showWarningMessage('No .repoignore file found. No files will be ignored.');
