@@ -30,7 +30,7 @@
     "commands": [
       {
         "command": "extension.copyRepoStructure",
-        "title": "Copy Repository Structure"
+        "title": "CRS: Copy Repository Structure"
       }
     ],
     "keybindings": [

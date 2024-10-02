@@ -33,15 +33,36 @@ class RepoStructureCopier {
 
     private async parseRepoIgnore(rootPath: string): Promise<ReturnType<typeof ignore>> {
         const ig = ignore();
-        const repoignorePath = path.join(rootPath, '.repoignore');
-        
+        const repoIgnorePath = path.join(rootPath, '.repoignore');
+        const gitignorePath = path.join(rootPath, '.gitignore');
+
         try {
-            const repoignoreContent = await fs.readFile(repoignorePath, 'utf8');
-            ig.add(repoignoreContent);
+            const repoIgnoreContent = await fs.readFile(repoIgnorePath, 'utf8');
+            ig.add(repoIgnoreContent);
         } catch (error) {
-            vscode.window.showWarningMessage('No .repoignore file found. No files will be ignored.');
+            // If .repoignore doesn't exist, create it from .gitignore
+            try {
+                let gitignoreContent = await fs.readFile(gitignorePath, 'utf8');
+
+                // Add '.git' to the ignore list if it's not already there
+                if (!gitignoreContent.includes('.git')) {
+                    gitignoreContent += '\n.git';
+                }
+
+                // Write the new .repoignore file
+                await fs.writeFile(repoIgnorePath, gitignoreContent);
+
+                ig.add(gitignoreContent);
+                vscode.window.showInformationMessage('.repoignore file created from .gitignore');
+            } catch (gitignoreError) {
+                // If .gitignore also doesn't exist, create a basic .repoignore
+                const basicIgnore = '.git\nnode_modules';
+                await fs.writeFile(repoIgnorePath, basicIgnore);
+                ig.add(basicIgnore);
+                vscode.window.showInformationMessage('Basic .repoignore file created');
+            }
         }
-        
+
         return ig;
     }
 
@@ -49,7 +70,7 @@ class RepoStructureCopier {
         if (!this.ig) {
             return false;
         }
-        
+
         const relativePath = path.relative(rootPath, filePath);
         return this.ig.ignores(relativePath);
     }
@@ -57,15 +78,15 @@ class RepoStructureCopier {
     private async traverseDirectory(dir: string, rootPath: string = dir): Promise<string> {
         let result = '<codebase>';
         const files = await fs.readdir(dir);
-        
+
         for (const file of files) {
             const filePath = path.join(dir, file);
             const stat = await fs.stat(filePath);
-            
+
             if (this.shouldIgnore(filePath, rootPath)) {
                 continue;
             }
-            
+
             if (stat.isDirectory()) {
                 result += await this.traverseDirectory(filePath, rootPath);
             } else {
@@ -73,7 +94,7 @@ class RepoStructureCopier {
                 result += `<file><path>${filePath}</path><content>${content}</content></file>`;
             }
         }
-        
+
         result += '</codebase>';
         return result;
     }
@@ -96,4 +117,4 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 }
 
-export function deactivate() {}
+export function deactivate() { }
