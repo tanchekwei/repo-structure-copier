@@ -111,10 +111,62 @@ class RepoStructureCopier {
     }
 }
 
+class RepoStructurePaster {
+    async pasteRepoStructure() {
+        const rootPath = this.getRootPath();
+        if (!rootPath) {
+            return;
+        }
+
+        const clipboardContent = await vscode.env.clipboard.readText();
+        if (!this.isValidCodebaseStructure(clipboardContent)) {
+            vscode.window.showErrorMessage('Invalid codebase structure in clipboard.');
+            return;
+        }
+
+        try {
+            await this.writeFiles(clipboardContent, rootPath);
+            vscode.window.showInformationMessage('Repository structure pasted successfully.');
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error pasting repository structure: ${(error as any).message}`);
+        }
+    }
+
+    private getRootPath(): string | null {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return null;
+        }
+        return workspaceFolders[0].uri.fsPath;
+    }
+
+    private isValidCodebaseStructure(content: string): boolean {
+        return content.startsWith('<codebase>') && content.endsWith('</codebase>');
+    }
+
+    private async writeFiles(content: string, rootPath: string) {
+        const fileRegex = /<file><path>(.*?)<\/path><content>([\s\S]*?)<\/content><\/file>/g;
+        let match;
+
+        while ((match = fileRegex.exec(content)) !== null) {
+            const [, filePath, fileContent] = match;
+            const fullPath = path.join(rootPath, filePath);
+
+            await fs.mkdir(path.dirname(fullPath), { recursive: true });
+            await fs.writeFile(fullPath, fileContent);
+        }
+    }
+}
+
 export function activate(context: vscode.ExtensionContext) {
     const repoStructureCopier = new RepoStructureCopier();
-    let disposable = vscode.commands.registerCommand('extension.copyRepoStructure', () => repoStructureCopier.copyRepoStructure());
-    context.subscriptions.push(disposable);
+    const repoStructurePaster = new RepoStructurePaster();
+
+    let copyDisposable = vscode.commands.registerCommand('extension.copyRepoStructure', () => repoStructureCopier.copyRepoStructure());
+    let pasteDisposable = vscode.commands.registerCommand('extension.pasteRepoStructure', () => repoStructurePaster.pasteRepoStructure());
+
+    context.subscriptions.push(copyDisposable, pasteDisposable);
 }
 
 export function deactivate() { }

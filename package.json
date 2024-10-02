@@ -31,6 +31,10 @@
       {
         "command": "extension.copyRepoStructure",
         "title": "CRS: Copy Repository Structure"
+      },
+      {
+        "command": "extension.pasteRepoStructure",
+        "title": "CRS: Paste Repository Structure"
       }
     ],
     "keybindings": [
@@ -38,12 +42,21 @@
         "command": "extension.copyRepoStructure",
         "key": "ctrl+alt+c",
         "mac": "cmd+alt+c"
+      },
+      {
+        "command": "extension.pasteRepoStructure",
+        "key": "ctrl+alt+v",
+        "mac": "cmd+alt+v"
       }
     ],
     "menus": {
       "explorer/context": [
         {
           "command": "extension.copyRepoStructure",
+          "group": "navigation"
+        },
+        {
+          "command": "extension.pasteRepoStructure",
           "group": "navigation"
         }
       ]
