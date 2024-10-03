@@ -10,7 +10,7 @@
   },
   "license": "MIT",
   "engines": {
-    "vscode": "^1.93.0"
+    "vscode": "^1.91.0"
   },
   "categories": [
     "Other"
@@ -95,7 +95,7 @@
     "@types/node": "20.x",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "@types/vscode": "^1.93.0",
+    "@types/vscode": "^1.91.0",
     "@typescript-eslint/eslint-plugin": "^8.3.0",
     "@typescript-eslint/parser": "^8.3.0",
     "@vscode/test-cli": "^0.0.10",
