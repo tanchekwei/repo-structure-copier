@@ -5,6 +5,9 @@ import StructurePreview from '../components/StructurePreview';
 declare global {
   interface Window {
     initialData: any;
+    acquireVsCodeApi?: () => {
+      postMessage: (message: any) => void;
+    };
   }
 }
 
@@ -19,6 +22,14 @@ if (window.initialData && typeof window.initialData === 'object') {
       <StructurePreview structure={window.initialData} />
     </React.StrictMode>
   );
+  // Add event listener for the custom event
+  window.addEventListener('copy-to-clipboard', (event: Event) => {
+    const customEvent = event as CustomEvent;
+    const vscode = window.acquireVsCodeApi?.();
+    if (vscode) {
+      vscode.postMessage({ command: 'copyToClipboard', text: customEvent.detail });
+    }
+  });
 } else {
   root.render(
     <React.StrictMode>

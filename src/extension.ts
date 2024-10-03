@@ -287,6 +287,19 @@ class RepoStructurePreview extends RepoStructureBase {
             this.panel.onDidDispose(() => {
                 this.panel = undefined;
             });
+
+            this.panel.webview.onDidReceiveMessage(
+                async (message) => {
+                    switch (message.command) {
+                        case 'copyToClipboard':
+                            await vscode.env.clipboard.writeText(message.text);
+                            vscode.window.showInformationMessage('Selected structure copied to clipboard');
+                            break;
+                    }
+                },
+                undefined,
+                this.context.subscriptions
+            );
         }
 
         const webviewUri = this.panel.webview.asWebviewUri(vscode.Uri.file(

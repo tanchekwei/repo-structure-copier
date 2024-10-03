@@ -199,6 +199,12 @@ function StructurePreview({ structure }: StructurePreviewProps) {
 
   const summary = calculateSummary(state);
 
+  const handleCopy = () => {
+    const selectedStructure = generateSelectedStructureXML(state);
+    // Instead of using vscode.postMessage, we'll dispatch a custom event
+    window.dispatchEvent(new CustomEvent('copy-to-clipboard', { detail: selectedStructure }));
+  };
+
   return (
     <TreeContext.Provider value={{ state, dispatch }}>
       <div>
@@ -207,6 +213,7 @@ function StructurePreview({ structure }: StructurePreviewProps) {
           <strong>Summary:</strong>
           <div>Selected Files: {formatNumber(summary.selectedFiles)}</div>
           <div>Selected Tokens: {formatNumber(summary.selectedTokens)}</div>
+          <button onClick={handleCopy}>Copy Selected Structure</button>
         </div>
         <ul className="tree">
           {state.map((node) => (
@@ -216,6 +223,21 @@ function StructurePreview({ structure }: StructurePreviewProps) {
       </div>
     </TreeContext.Provider>
   );
+}
+
+function generateSelectedStructureXML(nodes: TreeNodeType[]): string {
+  let result = '<codebase>';
+  nodes.forEach(node => {
+    if (node.checked) {
+      if (node.type === 'file') {
+        result += `<file><path>${node.node}</path><content>${node.content}</content></file>`;
+      } else if (node.children) {
+        result += generateSelectedStructureXML(node.children);
+      }
+    }
+  });
+  result += '</codebase>';
+  return result;
 }
 
 export default StructurePreview;
