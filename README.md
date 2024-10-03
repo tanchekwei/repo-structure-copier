@@ -8,6 +8,7 @@ This Visual Studio Code extension allows you to copy the structure of your repos
 - Includes file contents in the copied structure
 - Respects `.repoignore` rules for excluding files and directories
 - Provides a token count for the copied structure
+- Previews the repository structure before copying, including token counts for files and directories
 
 ## Usage
 
@@ -19,6 +20,17 @@ This Visual Studio Code extension allows you to copy the structure of your repos
    - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) to open the Command Palette
    - Type "Copy Repository Structure" and select the command
 4. The repository structure will be copied to your clipboard, and you'll see a notification with the token count
+5. To preview the repository structure:
+   - Use the keyboard shortcut:
+     - Windows: `Ctrl+Alt+P`
+     - macOS: `Cmd+Alt+P`
+   - Alternatively, you can:
+     - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) to open the Command Palette
+     - Type "Preview Repository Structure" and select the command
+   - A preview of the repository structure will be displayed in a new panel, showing:
+     - The hierarchical structure of your repository
+     - Token counts for each file
+     - Total token counts for each directory (including all subdirectories and files)
 
 ## .repoignore
 

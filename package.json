@@ -35,6 +35,10 @@
       {
         "command": "extension.pasteRepoStructure",
         "title": "CRS: Paste Repository Structure"
+      },
+      {
+        "command": "extension.previewRepoStructure",
+        "title": "CRS: Preview Repository Structure"
       }
     ],
     "keybindings": [
@@ -47,6 +51,11 @@
         "command": "extension.pasteRepoStructure",
         "key": "ctrl+alt+v",
         "mac": "cmd+alt+v"
+      },
+      {
+        "command": "extension.previewRepoStructure",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p"
       }
     ],
     "menus": {
@@ -58,6 +67,10 @@
         {
           "command": "extension.pasteRepoStructure",
           "group": "navigation"
+        },
+        {
+          "command": "extension.previewRepoStructure",
+          "group": "navigation"
         }
       ]
     }
@@ -68,19 +81,20 @@
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production && npm run copy-wasm",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vscode-test",
-    "copy-wasm": "cp node_modules/tiktoken/tiktoken_bg.wasm dist/",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production && npm run copy-wasm"
+    "copy-wasm": "cp node_modules/tiktoken/tiktoken_bg.wasm dist/"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
     "@types/node": "20.x",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@types/vscode": "^1.93.0",
     "@typescript-eslint/eslint-plugin": "^8.3.0",
     "@typescript-eslint/parser": "^8.3.0",
@@ -92,6 +106,9 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "ignore": "^5.3.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "tiktoken": "^1.0.16"
   },
   "author": "Niels Hop",
