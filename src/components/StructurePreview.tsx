@@ -1,243 +1,133 @@
-import * as React from 'react';
+import * as React from "react";
+import { useMemo } from "react";
+import { CommandFromWebView } from "../enums";
+import { StructurePreviewProps, TreeNodeType } from "../types";
+import { calculateSummary } from "../utils/treeUtils";
+import IgnoreOptionComponent from "./IgnoreOptionComponent";
+import MaxCharactersComponent from "./MaxCharactersComponent";
+import MaxDepthComponent from "./MaxDepthComponent";
+import ProgressBarComponent from "./ProgressBarComponent";
+import PromptComponent from "./PromptComponent";
+import TreeNode from "./TreeNode";
+import { TreeProvider } from "./TreeProvider";
+import useStructure from "../hooks/useStructure";
 
-type TreeNodeType = {
-  id: string;
-  node: string;
-  display: string;
-  type: 'file' | 'folder';
-  tokens: number;
-  checked: boolean;
-  expanded: boolean;
-  content: string | null;
-  children?: TreeNodeType[];
-  indeterminate?: boolean;
-};
-
-type StructurePreviewProps = {
-  structure: TreeNodeType[];
-};
-
-function formatNumber(num: number | undefined): string {
-  if (num === undefined) return '0';
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-type Action =
-  | { type: 'TOGGLE_CHECK'; payload: { id: string } }
-  | { type: 'TOGGLE_EXPAND'; payload: { id: string } }
-  | { type: 'SET_STRUCTURE'; payload: TreeNodeType[] };
-
-function treeReducer(state: TreeNodeType[], action: Action): TreeNodeType[] {
-  switch (action.type) {
-    case 'TOGGLE_CHECK':
-      const updatedState = toggleNodeChecked(state, action.payload.id);
-      return updateParentCheckedStatus(updatedState);
-    case 'TOGGLE_EXPAND':
-      return toggleNodeExpanded(state, action.payload.id);
-    case 'SET_STRUCTURE':
-      return action.payload;
-    default:
-      return state;
-  }
-}
-
-function toggleNodeChecked(nodes: TreeNodeType[], id: string): TreeNodeType[] {
-  return nodes.map(node => {
-    if (node.id === id) {
-      const newChecked = !node.checked;
-      return {
-        ...node,
-        checked: newChecked,
-        children: node.children ? toggleAllChildren(node.children, newChecked) : undefined
-      };
-    }
-    if (node.children) {
-      return { ...node, children: toggleNodeChecked(node.children, id) };
-    }
-    return node;
-  });
-}
-
-function toggleAllChildren(children: TreeNodeType[], checked: boolean): TreeNodeType[] {
-  return children.map(child => ({
-    ...child,
-    checked,
-    children: child.children ? toggleAllChildren(child.children, checked) : undefined
-  }));
-}
-
-function updateParentCheckedStatus(nodes: TreeNodeType[]): TreeNodeType[] {
-  return nodes.map(node => {
-    if (node.children) {
-      const updatedChildren = updateParentCheckedStatus(node.children);
-      const allChildrenChecked = updatedChildren.every(child => child.checked);
-      const someChildrenChecked = updatedChildren.some(child => child.checked);
-      return {
-        ...node,
-        children: updatedChildren,
-        checked: someChildrenChecked,
-        indeterminate: someChildrenChecked && !allChildrenChecked
-      };
-    }
-    return node;
-  });
-}
-
-function updateCounts(nodes: TreeNodeType[]): TreeNodeType[] {
-  return nodes.map(node => {
-    if (node.type === 'file') {
-      return node;
-    }
-    if (node.children) {
-      const updatedChildren = updateCounts(node.children);
-      const { tokens, files } = calculateFolderCounts(updatedChildren);
-      return {
-        ...node,
-        children: updatedChildren,
-        tokens: tokens, // Remove the node.checked condition
-      };
-    }
-    return node;
-  });
-}
-
-function calculateFolderCounts(children: TreeNodeType[]): { tokens: number; files: number } {
-  return children.reduce((acc, child) => {
-    if (child.type === 'file') {
-      if (child.checked) {
-        acc.tokens += child.tokens;
-        acc.files += 1;
-      }
-    } else {
-      const { tokens, files } = calculateFolderCounts(child.children || []);
-      acc.tokens += tokens;
-      acc.files += files;
-    }
-    return acc;
-  }, { tokens: 0, files: 0 });
-}
-
-function toggleNodeExpanded(nodes: TreeNodeType[], id: string): TreeNodeType[] {
-  return nodes.map(node => {
-    if (node.id === id) {
-      return { ...node, expanded: !node.expanded };
-    }
-    if (node.children) {
-      return { ...node, children: toggleNodeExpanded(node.children, id) };
-    }
-    return node;
-  });
-}
-
-const TreeContext = React.createContext<{
-  state: TreeNodeType[];
-  dispatch: React.Dispatch<Action>;
-} | undefined>(undefined);
-
-function TreeNode({ node }: { node: TreeNodeType }) {
-  const { dispatch } = React.useContext(TreeContext)!;
-
-  const handleCheckboxChange = () => {
-    dispatch({ type: 'TOGGLE_CHECK', payload: { id: node.id } });
-  };
-
-  const handleToggleExpand = () => {
-    if (node.type === 'folder') {
-      dispatch({ type: 'TOGGLE_EXPAND', payload: { id: node.id } });
-    }
-  };
+const StructurePreview: React.FC<StructurePreviewProps> = ({ initialData }) => {
+  const structure = useStructure({ initialData });
+  const summary = useMemo(() => calculateSummary(structure.state), [structure.state]);
 
   return (
-    <li>
-      <input
-        type="checkbox"
-        checked={node.checked}
-        ref={el => {
-          if (el) {
-            el.indeterminate = node.indeterminate || false;
-          }
-        }}
-        onChange={handleCheckboxChange}
-      />
-      <span onClick={handleToggleExpand} style={{ cursor: 'pointer' }}>
-        {node.type === 'folder' && (node.expanded ? '▼' : '▶')} {node.display}
-      </span>
-      <span style={{ color: 'lightblue' }}> ({formatNumber(node.tokens)} tokens)</span>
-      {node.type === 'folder' && node.expanded && node.children && node.children.length > 0 && (
-        <ul>
-          {node.children.map((child) => (
-            <TreeNode key={child.id} node={child} />
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-}
-
-function calculateSummary(nodes: TreeNodeType[]): { selectedFiles: number; selectedTokens: number } {
-  return nodes.reduce((summary, node) => {
-    if (node.type === 'file') {
-      if (node.checked) {
-        summary.selectedFiles += 1;
-        summary.selectedTokens += node.tokens;
-      }
-    } else if (node.children) {
-      const childSummary = calculateSummary(node.children);
-      summary.selectedFiles += childSummary.selectedFiles;
-      summary.selectedTokens += childSummary.selectedTokens;
-    }
-    return summary;
-  }, { selectedFiles: 0, selectedTokens: 0 });
-}
-
-function StructurePreview({ structure }: StructurePreviewProps) {
-  const [state, dispatch] = React.useReducer(treeReducer, structure);
-
-  React.useEffect(() => {
-    dispatch({ type: 'SET_STRUCTURE', payload: updateCounts(structure) });
-  }, [structure]);
-
-  const summary = calculateSummary(state);
-
-  const handleCopy = () => {
-    const selectedStructure = generateSelectedStructureXML(state);
-    // Instead of using vscode.postMessage, we'll dispatch a custom event
-    window.dispatchEvent(new CustomEvent('copy-to-clipboard', { detail: selectedStructure }));
-  };
-
-  return (
-    <TreeContext.Provider value={{ state, dispatch }}>
-      <div>
-        <h2>Repository Structure</h2>
-        <div style={{ marginBottom: '20px' }}>
-          <strong>Summary:</strong>
-          <div>Selected Files: {formatNumber(summary.selectedFiles)}</div>
-          <div>Selected Tokens: {formatNumber(summary.selectedTokens)}</div>
-          <button onClick={handleCopy}>Copy Selected Structure</button>
+    <div>
+      <div className="container"
+      >
+        {structure.isStructureLoading && (
+          <div style={{
+            transition: "opacity 0.5s",
+            opacity: structure.isStructureLoading ? 1 : 0,
+          }}>
+            <ProgressBarComponent id="fileStructureProgress" />
+            <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center" }}>
+              Loading repository file structure...&nbsp;
+              <button
+                className="split-button"
+                style={{ marginBottom: "0.5rem", width: "auto" }}
+                onClick={() =>
+                  window.vscode.postMessage({
+                    command: CommandFromWebView.stopSetStructure,
+                  })
+                }
+              >
+                Stop
+              </button>
+            </div>
+          </div>
+        )}
+        <div style={{
+          transition: "opacity 0.5s",
+          opacity: structure.isStructureLoading ? 0.6 : 1,
+        }}>
+          <IgnoreOptionComponent
+            ignoreOptions={structure.ignoreOptions}
+            setIgnoreOptions={structure.setIgnoreOptions}
+            isStructureLoading={structure.isStructureLoading}
+          />
+          <MaxDepthComponent
+            maxDepth={structure.maxDepth}
+            setMaxDepth={structure.setMaxDepth}
+            isStructureLoading={structure.isStructureLoading}
+          />
+          <TreeProvider folderPathOrFiles={structure.folderPathOrFiles} state={structure.state} dispatch={structure.dispatch} structure={structure.structure} setStructure={structure.setStructure} ignoreOptions={structure.ignoreOptions} maxDepth={structure.maxDepth} setIsStructureLoading={structure.setIsStructureLoading}>
+            <div>
+              <div>
+                <strong>Summary:</strong>
+                <div>Selected Files: {summary.selectedFiles?.toLocaleString()}</div>
+                <div>Selected Tokens: {summary.selectedTokens?.toLocaleString()}</div>
+              </div>
+              <div
+                style={{
+                  maxHeight: "400px",
+                  overflowY: "auto",
+                }}
+              >
+                <ul className="tree">
+                  {structure.state.map((node: TreeNodeType) => (
+                    <TreeNode key={node.id} node={node} isStructureLoading={structure.isStructureLoading} />
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </TreeProvider>
         </div>
-        <ul className="tree">
-          {state.map((node) => (
-            <TreeNode key={node.id} node={node} />
-          ))}
-        </ul>
       </div>
-    </TreeContext.Provider>
+      <br />
+      <MaxCharactersComponent
+        characterLimit={structure.characterLimit}
+        selectedLimitOption={structure.selectedLimitOption}
+        customLimit={structure.customLimit}
+        setCustomLimit={structure.setCustomLimit}
+        handleSelectionChange={structure.handleSelectionChange}
+        handleCustomLimitChange={structure.handleCustomLimitChange}
+      />
+      <PromptComponent
+        prompt={structure.prompt}
+        handlePromptChange={structure.handlePromptChange}
+      />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: "1rem",
+          overflowY: "auto",
+        }}
+      >
+        <button
+          style={{ marginBottom: "0.5rem" }}
+          className="split-button"
+          onClick={() => structure.splitContentIntoParts(structure.state, structure.prompt)}
+          disabled={structure.isStructureLoading}
+        >
+          Split Content into Parts
+        </button>
+      </div>
+      {structure.partsCount > 0 && (
+        <div style={{
+          transition: "opacity 0.5s",
+          opacity: structure.isPartsLoading ? 0.8 : 1,
+        }}>
+          <label style={{ marginBottom: "0.25rem", display: "block" }}>
+            Parts:
+          </label>
+          {structure.isPartsLoading && <ProgressBarComponent id="partsProgress" />}
+          {Array.from({ length: structure.partsCount }, (_, i) => (
+            <button className="copy-part-button" key={i} onClick={() => structure.copyPartToClipboard(i)}>
+              Copy Part {i + 1}
+            </button>
+          ))}
+        </div>
+      )}
+      <br />
+    </div>
   );
-}
+};
 
-function generateSelectedStructureXML(nodes: TreeNodeType[]): string {
-  let result = '<codebase>';
-  nodes.forEach(node => {
-    if (node.checked) {
-      if (node.type === 'file') {
-        result += `<file><path>${node.node}</path><content>${node.content}</content></file>`;
-      } else if (node.children) {
-        result += generateSelectedStructureXML(node.children);
-      }
-    }
-  });
-  result += '</codebase>';
-  return result;
-}
-
-export default StructurePreview;
+export default React.memo(StructurePreview);

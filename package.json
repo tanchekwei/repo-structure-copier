@@ -1,16 +1,17 @@
 {
-  "name": "repo-structure-copier",
-  "displayName": "Codebase Structure Copier",
-  "description": "Extension to copy the full code repository structure to clipboard for use in LLMs",
+  "name": "repo-copier",
+  "displayName": "Repository Copier",
+  "description": "Copy repository content for LLM chat context initialization.",
   "version": "1.0.3",
-  "publisher": "NielsHop",
+  "publisher": "chekweitan",
   "repository": {
     "type": "git",
-    "url": "https://github.com/niels-hop/repo-structure-copier"
+    "url": "https://github.com/tanchekwei/repo-copier"
   },
+  "changelog": "CHANGELOG.md",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.91.0"
+    "vscode": "^1.96.0"
   },
   "categories": [
     "Other"
@@ -29,50 +30,87 @@
   "contributes": {
     "commands": [
       {
-        "command": "extension.copyRepoStructure",
-        "title": "CRS: Copy Repository Structure"
-      },
-      {
-        "command": "extension.pasteRepoStructure",
-        "title": "CRS: Paste Repository Structure"
-      },
-      {
-        "command": "extension.previewRepoStructure",
-        "title": "CRS: Preview Repository Structure"
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "extension.copyRepoStructure",
-        "key": "ctrl+alt+c",
-        "mac": "cmd+alt+c"
-      },
-      {
-        "command": "extension.pasteRepoStructure",
-        "key": "ctrl+alt+v",
-        "mac": "cmd+alt+v"
-      },
-      {
-        "command": "extension.previewRepoStructure",
-        "key": "ctrl+alt+p",
-        "mac": "cmd+alt+p"
+        "command": "repo-copier.repositoryCopier",
+        "title": "Repository Copier"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "extension.copyRepoStructure",
-          "group": "navigation"
-        },
-        {
-          "command": "extension.pasteRepoStructure",
-          "group": "navigation"
-        },
-        {
-          "command": "extension.previewRepoStructure",
-          "group": "navigation"
+          "command": "repo-copier.repositoryCopier",
+          "group": "6_copypath@99"
         }
       ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "Repository Copier",
+      "properties": {
+        "repo-copier.ignorePattern": {
+          "type": "array",
+          "description": "List of files or folders to exclude when displaying the repository structure.",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            ".*",
+            "package-lock.json",
+            "node_modules"
+          ]
+        },
+        "repo-copier.ignoreOption": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Default options for ignoring specific files or folders in the repository structure.",
+          "properties": {
+            "Use extension ignore pattern": {
+              "type": "boolean",
+              "description": "Enable or disable the use of the ignore pattern defined in the extension settings (ignorePattern)."
+            },
+            "Use .gitignore": {
+              "type": "boolean",
+              "description": "Enable or disable the use of the `.gitignore` file located in the workspace directory."
+            },
+            "Use .repoignore": {
+              "type": "boolean",
+              "description": "Enable or disable the use of the `.repoignore` file located in the workspace directory."
+            },
+            "Ignore binary file": {
+              "type": "boolean",
+              "description": "Enable or disable ignoring binary files such as videos, images, executables, etc."
+            }
+          },
+          "default": {
+            "Use extension ignore pattern": true,
+            "Use .gitignore": true,
+            "Use .repoignore": true,
+            "Ignore binary file": true
+          }
+        },
+        "repo-copier.maxDepth": {
+          "type": "number",
+          "default": 5,
+          "description": "Default maximum depth to traverse in the directory structure."
+        },
+        "repo-copier.maxCharactersPerPart": {
+          "type": "object",
+          "default": {
+            "ChatGPT": 20000,
+            "Microsoft Copilot": 16000,
+            "Add Your Own": 99999
+          },
+          "description": "Default maximum number of characters allowed per prompt for various LLM models.",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "repo-copier.prompt": {
+          "type": "string",
+          "editPresentation": "multilineText",
+          "default": "This is part ${PART_INDEX} of ${TOTAL_PARTS} containing repository file data. Please wait for all parts before processing.",
+          "description": "Default prompt to be added above each part. Use placeholders `${PART_INDEX}` and `${TOTAL_PARTS}` to dynamically insert the part index and total number of parts"
+        }
+      }
     }
   },
   "scripts": {
@@ -81,36 +119,36 @@
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production && npm run copy-wasm",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vscode-test",
-    "copy-wasm": "cp node_modules/tiktoken/tiktoken_bg.wasm dist/"
+    "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.7",
-    "@types/node": "20.x",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@types/vscode": "^1.91.0",
-    "@typescript-eslint/eslint-plugin": "^8.3.0",
-    "@typescript-eslint/parser": "^8.3.0",
+    "@types/lodash": "^4.17.14",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "@types/vscode": "^1.96.0",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
-    "esbuild": "^0.23.1",
-    "eslint": "^9.9.1",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.5.4"
+    "esbuild": "^0.24.2",
+    "esbuild-plugin-svgr": "^3.1.0",
+    "eslint": "^9.18.0",
+    "shx": "^0.3.4",
+    "typescript": "^5.7.3"
   },
   "dependencies": {
-    "ignore": "^5.3.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "tiktoken": "^1.0.16"
-  },
-  "author": "Niels Hop",
-  "changelog": "CHANGELOG.md"
+    "ignore": "^7.0.0",
+    "isbinaryfile": "^5.0.4",
+    "lodash": "^4.17.21",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
 }
